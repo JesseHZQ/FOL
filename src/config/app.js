@@ -1,6 +1,6 @@
 const config = {
-  // baseUrl: 'http://localhost:57350/api/',
-  baseUrl: 'http://10.194.51.14:3001/FOL/api/',
+  baseUrl: 'http://localhost:57350/api/',
+  // baseUrl: 'http://10.194.51.14:3001/FOL/api/',
 
   inputMenu: [
     {
