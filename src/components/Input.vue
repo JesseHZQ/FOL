@@ -24,8 +24,8 @@
         <FormItem label="GL Output Code:">
           <Input v-model="formValidate['GLOutputCode']" disabled style="width:100px" />
         </FormItem>
-        <FormItem v-for="i in 16" :key="i" :label="'Period' + i + ':'" :prop="'Period' + i">
-          <Input v-model="formValidate['Period' + i]" number style="width:100px" />
+        <FormItem v-for="(item, index) in activeColumn.slice(9, 25)" :key="index" :label="item.title + ':'" :prop="'Period' + (index + 1)">
+          <Input v-model="formValidate['Period' + (index + 1)]" number style="width:100px" />
         </FormItem>
       </Form>
     </Modal>
