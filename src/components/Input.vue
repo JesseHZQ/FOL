@@ -7,6 +7,22 @@
       </Menu>
     </div>
     <div style="position: absolute; top: 90px; left: 179px; right: 0;" class="clearfix">
+      <Select v-model="fileType" style="width:120px; margin: 0 10px; float: left;">
+        <Option value="1">Forecast</Option>
+        <Option value="2">Percent</Option>
+        <Option value="3">Amount</Option>
+      </Select>
+      <Upload
+        style="margin-left: 10px;"
+        :before-upload="beforeUpload"
+        action="666">
+        <Button icon="ios-cloud-upload-outline">Upload File</Button>
+      </Upload>
+      <ButtonGroup shape="circle" style="position: absolute; left: 40%; top: 0; z-index: 9999;">
+        <Button @click="changeDataType('forecast')" :type="currentPage == 'forecast' ? 'primary' : 'default'" :disabled="forecastData.length == 0">Forecast</Button>
+        <Button @click="changeDataType('percent')" :type="currentPage == 'percent' ? 'primary' : 'default'" :disabled="percentData.length == 0">Percent</Button>
+        <Button @click="changeDataType('amount')" :type="currentPage == 'amount' ? 'primary' : 'default'" :disabled="amountData.length == 0">Amount</Button>
+      </ButtonGroup>
       <!-- tab栏 -->
       <Tabs type="card" @on-click="changeType" :value="secondSelected">
         <TabPane v-for="(item, index) in secondList" :key="index" :name="item" :label="item"></TabPane>
@@ -39,7 +55,7 @@
   export default {
     data() {
       return {
-        version: '2018-07',
+        version: '2018-11',
         tool: config,
         activeName: config.inputMenu[0].item,
         secondSelected: config.inputMenu[0].subItem[0],
@@ -155,6 +171,14 @@
             trigger: 'change'
           }],
         },
+        fileType: null,
+        currentPage: '',
+        isHasForecast: true,
+        isHasPercent: true,
+        isHasAmount: true,
+        forecastData: [],
+        percentData: [],
+        amountData: []
       }
     },
 
@@ -321,11 +345,22 @@
     methods: {
       getTypedList() {
         this.table.loading = true
-        this.$http.get(config.baseUrl + 'FOL_Input/getTypedList?version=' + this.version + '&type=' + this.secondSelected)
-          .then(res => {
-            this.table.data = res.body.Data
-            this.table.loading = false
-          })
+        this.$http.get(config.baseUrl + 'FOL_Input/getTypedList?version=' + this.version + '&type=' + this.secondSelected).then(res => {
+          this.forecastData = res.body.DataForecast
+          this.percentData = res.body.DataPercent
+          this.amountData = res.body.DataAmount
+          if (this.amountData.length > 0) {
+            this.currentPage = 'amount'
+          }
+          if (this.percentData.length > 0) {
+            this.currentPage = 'percent'
+          }
+          if (this.forecastData.length > 0) {
+            this.currentPage = 'forecast'
+          }
+          this.table.data = this[this.currentPage + 'Data']
+          this.table.loading = false
+        })
       },
 
       submit() {
@@ -354,6 +389,34 @@
         this.secondList = this.tool.inputMenu.find(i => i.item == name).subItem
         this.secondSelected = this.secondList[0]
         this.getTypedList()
+      },
+
+      beforeUpload(file) {
+        if (!this.fileType) {
+          return this.$Message.error('请选择上传文件的类型！');
+        }
+        let fd = new FormData();
+        fd.append('file', file);
+        fd.append('fileType', this.fileType);
+        fd.append('type', this.secondSelected);
+        fd.append('version', this.version);
+        this.$http.post(config.baseUrl + 'FOL_Input/uploadFile', fd, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }).then(res => {
+          if (res.body.Code == 200) {
+            this.getTypedList()
+          } else {
+            alert('Fail')
+          }
+        })
+        return false;
+      },
+
+      changeDataType(type) {
+        this.currentPage = type
+        this.table.data = this[this.currentPage + 'Data']
       }
     }
   }
