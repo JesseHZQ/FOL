@@ -21,13 +21,14 @@ html::-webkit-scrollbar {
 }
 
 .clearfix:after {
-  content: ".";
+  visibility: hidden;
   display: block;
-  height: 0;
+  font-size: 0;
+  content: " ";
   clear: both;
-  visibility: hidden
+  height: 0;
 }
 
 .clearfix {
-  *+height: 1%;
+  *zoom: 1;
 }

@@ -7,6 +7,7 @@
       </Menu>
     </div>
     <div style="position: absolute; top: 90px; left: 179px; right: 0;" class="clearfix">
+      <span style="float: left; height: 30px; line-height: 30px; margin-left: 10px;">File Type : </span>
       <Select v-model="fileType" style="width:120px; margin: 0 10px; float: left;">
         <Option value="1">Forecast</Option>
         <Option value="2">Percent</Option>
@@ -18,11 +19,14 @@
         action="666">
         <Button icon="ios-cloud-upload-outline">Upload File</Button>
       </Upload>
-      <ButtonGroup shape="circle" style="position: absolute; left: 40%; top: 0; z-index: 9999;">
-        <Button @click="changeDataType('forecast')" :type="currentPage == 'forecast' ? 'primary' : 'default'" :disabled="forecastData.length == 0">Forecast</Button>
-        <Button @click="changeDataType('percent')" :type="currentPage == 'percent' ? 'primary' : 'default'" :disabled="percentData.length == 0">Percent</Button>
-        <Button @click="changeDataType('amount')" :type="currentPage == 'amount' ? 'primary' : 'default'" :disabled="amountData.length == 0">Amount</Button>
-      </ButtonGroup>
+      <div style="position: absolute; left: 40%; top: 0; z-index: 99;">
+        <ButtonGroup shape="circle">
+          <Button @click="changeDataType('forecast')" :type="currentPage == 'forecast' ? 'primary' : 'default'" :disabled="forecastData.length == 0">Forecast</Button>
+          <Button @click="changeDataType('percent')" :type="currentPage == 'percent' ? 'primary' : 'default'" :disabled="percentData.length == 0">Percent</Button>
+          <Button @click="changeDataType('amount')" :type="currentPage == 'amount' ? 'primary' : 'default'" :disabled="amountData.length == 0">Amount</Button>
+        </ButtonGroup>
+        <Button style="margin-left: 20px;" icon="ios-calculator" type="success" @click="calculateData">Calculate</Button>
+      </div>
       <!-- tab栏 -->
       <Tabs type="card" @on-click="changeType" :value="secondSelected">
         <TabPane v-for="(item, index) in secondList" :key="index" :name="item" :label="item"></TabPane>
@@ -30,9 +34,9 @@
       <Table ref="table" class="picktab" border size="small" :height="tableHeight" :width="tableWidth" :columns="activeColumn"
         :loading="table.loading" :data="table.data"></Table>
     </div>
-    <div style="position: fixed; left: 180px; top: 25px; z-index: 1000;">
+    <div style="position: fixed; left: 180px; top: 30px; z-index: 1000;">
       <span style="color: #fff; font-size: 14px;">Version : </span>
-      <DatePicker @on-change="versionChange" :value="version" type="month" placeholder="Select month" style="width: 200px"></DatePicker>
+      <DatePicker @on-change="versionChange" :value="version" size="small" type="month" placeholder="Select month" style="width: 120px"></DatePicker>
     </div>
     <!-- 编辑发送通知Modal -->
     <Modal :title="formValidate['GLOutputCode'] + ' Edit window'" width="500" v-model="editShow" @on-ok="submit">
@@ -71,7 +75,7 @@
         editId: null,
         value: '123',
         formValidate: {
-          period1: 123
+          GLOutputCode: ''
         }, // 表单对象
         ruleValidate: { // 表单验证对象
           Period1: [{
@@ -274,6 +278,9 @@
           width: 100,
           align: 'center',
           render: (h, params) => {
+            if (this.currentPage == 'percent') {
+              return h('div', (params.row['Period1'] * 100).toFixed(2) + '%')
+            }
             return h('div', get_thousand_num(parseInt(params.row['Period1'])))
           }
         })
@@ -286,6 +293,9 @@
             width: 100,
             align: 'center',
             render: (h, params) => {
+              if (this.currentPage == 'percent') {
+                return h('div', (params.row['Period' + (i + 2)] * 100).toFixed(2) + '%')
+              }
               return h('div', get_thousand_num(parseInt(params.row['Period' + (i + 2)])))
             }
           })
@@ -309,7 +319,7 @@
                 on: {
                   click: () => {
                     this.editId = params.row.ID
-                    this.$http.get(config.baseUrl + 'FOL_Input/getItemById?id=' + this.editId).then(res => {
+                    this.$http.get(config.baseUrl + `FOL_Input/getItemById?id=${this.editId}&type=${this.currentPage}`).then(res => {
                       this.formValidate = res.body.Data[0]
                       this.editShow = true
                     })
@@ -321,6 +331,9 @@
         })
 
         function get_thousand_num(num) {
+          if (num.toString().indexOf('%') > -1) {
+            return num
+          }
           return num.toString().replace(/\d+/, function (n) { // 先提取整数部分
             return n.replace(/(\d)(?=(\d{3})+$)/g, function ($1) { // 对整数部分添加分隔符
               return $1 + ",";
@@ -345,6 +358,7 @@
     methods: {
       getTypedList() {
         this.table.loading = true
+        this.currentPage = ''
         this.$http.get(config.baseUrl + 'FOL_Input/getTypedList?version=' + this.version + '&type=' + this.secondSelected).then(res => {
           this.forecastData = res.body.DataForecast
           this.percentData = res.body.DataPercent
@@ -363,7 +377,14 @@
         })
       },
 
+      calculateData() {
+        this.$http.get(config.baseUrl + `FOL_Input/calculateByType?type=${this.secondSelected}&version=${this.version}`).then(res => {
+          console.log(res)
+        })
+      },
+
       submit() {
+        this.formValidate.DataType = this.currentPage
         this.$http.post(config.baseUrl + 'FOL_Input/updateItemById', this.formValidate).then(res => {
           if (res.body.Code == 200) {
             this.$Message.success(res.body.Message);

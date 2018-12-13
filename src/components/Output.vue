@@ -35,21 +35,45 @@
       </Submenu>
     </Menu>
     <Input placeholder="Enter something..." style="width: 300px" /> -->
-    <p style="font-size: 24px; text-align: center; margin-top: 100px;">暂未开放，敬请期待。。。</p>
+    <div>
+      <Menu @on-select="selectMenu" :active-name="activeName" theme="dark" :style="{ minHeight: menuHeight + 'px'}"
+        width="180px">
+        <MenuItem v-for="(item, index) in tool.outputMenu" :key="index" :name="item.item">{{ item.item }}</MenuItem>
+      </Menu>
+    </div>
+    <div style="position: absolute; top: 90px; left: 180px; right: 0;" class="clearfix">
+      <router-view></router-view>
+    </div>
   </div>
 </template>
 
 <script>
+  import {
+    config
+  } from '../config/app.js'
   export default {
     name: 'Output',
     data() {
       return {
         menuHeight: 0,
+        version: '2018-11',
+        tool: config,
+        activeName: config.outputMenu[0].item,
       }
     },
     
     mounted() {
-      this.menuHeight = window.innerHeight - 136;
+      this.menuHeight = window.innerHeight - 80;
+    },
+
+    methods: {
+      selectMenu(name) {
+        this.activeName = name;
+        this.$router.push(this.tool.outputMenu.find(i => i.item == name).url)
+        // this.secondList = this.tool.inputMenu.find(i => i.item == name).subItem
+        // this.secondSelected = this.secondList[0]
+        // this.getTypedList()
+      },
     }
   }
 
