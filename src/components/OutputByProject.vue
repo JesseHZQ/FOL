@@ -23,16 +23,17 @@
   export default {
     data() {
       return {
-        version: '2018-07',
+        version: '2018-11',
         projectList: [],
-        project: 'AGI',
+        project: 'TDN',
         tableHeight: 0,
         tableWidth: 0,
         table: {
           loading: false,
           column: [{
             title: 'BPCCode',
-            width: 100,
+            width: 200,
+            fixed: 'left',
             align: 'center',
             render: (h, params) => {
               if (params.row.BPCCode.indexOf('_') > -1) {
@@ -77,6 +78,7 @@
         this.table.loading = true
         this.$http.get(config.baseUrl + `FOL_Output/getOutputData?version=${this.version}&project=${this.project}`).then(res => {
           var acdata = JSON.parse(res.body.Actual[0].Value)
+          var formulas = res.body.OutputModules
           var cfdata = res.body.CurrentForcast
           var pfdata = JSON.parse(res.body.PriorForcast[0].Value)
           var acarr = acdata[0].Details
@@ -111,6 +113,7 @@
               key: i.month,
               width: 130,
               align: 'center',
+              className: 'columnPrio',
               renderHeader: (h, params) => {
                 return h('div', [
                   h('p', {
@@ -131,6 +134,7 @@
               key: 'Period'+ (e + 1),
               width: 130,
               align: 'center',
+              className: 'columnActual',
               renderHeader: (h, params) => {
                 return h('div', [
                   h('p', {
@@ -148,16 +152,94 @@
             })
           })
 
-          acdata.forEach(i => {
+          acdata.forEach((i, index) => {
             var temp = pfdata.find(e => e.BPCCode == i.BPCCode)
             i.Details = [...i.Details, ...temp.Details]
             // TODO: 计算currentForcast
+            var formulasItem = formulas[index]
+            if (formulasItem) {
+              var isHasPercent = formulasItem.BPCDescription.indexOf('%') > -1
+              if (formulasItem.ForecastDataSource) {
+                var tempData = cfdata.find(i => i.Type.indexOf(formulasItem.ForecastDataSource) > -1)
+                if (tempData) {
+                  for (let count = 1; count < 19; count++) {
+                    // i.Details['Period' + count] = tempData['Period' + count] == undefined ? 0 : tempData['Period' + count]
+                    i.Details.push({
+                      month: 'Period' + count,
+                      isHasPercent: isHasPercent,
+                      money: tempData['Period' + count] == undefined ? 0 : tempData['Period' + count]
+                    })
+                  }
+                }
+              }
+
+              else if (formulasItem.Formulas) {
+                // formulasItem.Formulas = formulasItem.Formulas.replace('+', ',+,').replace('-', ',-,').replace('*', ',*,').replace('/', ',/,')
+                var tempArr = formulasItem.Formulas.split(',')
+                var resultArr = []
+                var st = ''
+                tempArr.forEach((e, i) => {
+                  if (i % 2 == 0) {
+                    var tempData = cfdata.find(i => i.GLBPCCode.indexOf(e) > -1)
+                    if (tempData) {
+                      resultArr.push(tempData)
+                    } else {
+                      resultArr.push({
+                        Period1: 0,
+                        Period2: 0,
+                        Period3: 0,
+                        Period4: 0,
+                        Period5: 0,
+                        Period6: 0,
+                        Period7: 0,
+                        Period8: 0,
+                        Period9: 0,
+                        Period10: 0,
+                        Period11: 0,
+                        Period12: 0,
+                        Period13: 0,
+                        Period14: 0,
+                        Period15: 0,
+                        Period16: 0,
+                        Period17: 0,
+                        Period18: 0,
+                      })
+                    }
+                    st = st + '${resultArr['+ i / 2 + ']["PeriodCount"]}'
+                  } else {
+                    st = st + e
+                  }
+                })
+                for (var count = 1; count < 19; count++) {
+                  var reg = new RegExp('Count' , 'g')
+                  st = st.replace(reg, count)
+                  i.Details.push({
+                    month: 'Period' + count,
+                    isHasPercent: isHasPercent,
+                    money: eval(eval('`' + st + '`'))
+                  })
+                }
+              }
+
+              else {
+                for (let count = 1; count < 19; count++) {
+                  i.Details.push({
+                    month: 'Period' + count,
+                    isHasPercent: isHasPercent,
+                    money: 0
+                  })
+                }
+              }
+            }
+            
             i.Details.forEach(item => {
-              i[item.month] = get_thousand_num(item.money).toString().substr(0, get_thousand_num(item.money).indexOf('.') == -1 ? get_thousand_num(item.money).toString().length : get_thousand_num(item.money).indexOf('.'))
+              if (!item.isHasPercent) {
+                i[item.month] = get_thousand_num(item.money).toString().substr(0, get_thousand_num(item.money).indexOf('.') == -1 ? get_thousand_num(item.money).toString().length : get_thousand_num(item.money).indexOf('.'))
+              } else {
+                i[item.month] = (item.money * 100).toFixed(2) + '%'
+              }
             })
           })
-
-          console.log(acdata)
 
           this.table.data = acdata
           this.table.loading = false
@@ -198,6 +280,14 @@
   /deep/ .picktab .ivu-table td,
   .ivu-table th {
     height: unset;
+  }
+
+  /deep/ .ivu-table .columnActual {
+    background-color: #ddd;
+  }
+
+  /deep/ .ivu-table .columnPrio {
+    background-color: #ccc;
   }
 
 </style>

@@ -38,6 +38,10 @@
       <span style="color: #fff; font-size: 14px;">Version : </span>
       <DatePicker @on-change="versionChange" :value="version" size="small" type="month" placeholder="Select month" style="width: 120px"></DatePicker>
     </div>
+    <Spin fix v-if="spinShow">
+      <Icon type="ios-loading" size=32 class="demo-spin-icon-load"></Icon>
+      <div><span style="font-size: 18px;">Calculating...</span></div>
+    </Spin>
     <!-- 编辑发送通知Modal -->
     <Modal :title="formValidate['GLOutputCode'] + ' Edit window'" width="500" v-model="editShow" @on-ok="submit">
       <Form ref="formValidate" :rules="ruleValidate" :model="formValidate" :label-width="120">
@@ -59,6 +63,7 @@
   export default {
     data() {
       return {
+        spinShow: false,
         version: '2018-11',
         tool: config,
         activeName: config.inputMenu[0].item,
@@ -378,8 +383,16 @@
       },
 
       calculateData() {
-        this.$http.get(config.baseUrl + `FOL_Input/calculateByType?type=${this.secondSelected}&version=${this.version}`).then(res => {
-          console.log(res)
+        this.spinShow = true;
+        var str = this.secondSelected.replace('&', '%26')
+        this.$http.get(config.baseUrl + `FOL_Input/calculateByType?type=${str}&version=${this.version}`).then(res => {
+          this.spinShow = false;
+          if (res.body.Code == '200') {
+            this.$Message.success(res.body.Message);
+            this.getTypedList()
+          } else {
+            this.$Message.success(res.body.Message);
+          }
         })
       },
 
@@ -416,6 +429,7 @@
         if (!this.fileType) {
           return this.$Message.error('请选择上传文件的类型！');
         }
+        debugger
         let fd = new FormData();
         fd.append('file', file);
         fd.append('fileType', this.fileType);
@@ -471,6 +485,10 @@
 
   /deep/ .ivu-form-item {
     margin-bottom: 5px;
+  }
+
+  /deep/ .ivu-spin-fix {
+    z-index: 999999;
   }
 
 </style>
