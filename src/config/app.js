@@ -88,12 +88,12 @@ const config = {
         '7.2 S.M.(%)'
       ]
     },
-    {
-      item: '8.0 Corp. Alloc.(%)',
-      subItem: [
-        '8.0 Corp. Alloc.(%)'
-      ]
-    },
+    // {
+    //   item: '8.0 Corp. Alloc.(%)',
+    //   subItem: [
+    //     '8.0 Corp. Alloc.(%)'
+    //   ]
+    // },
     {
       item: '9.0 Other Costs($)',
       subItem: [

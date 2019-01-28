@@ -42,7 +42,9 @@
       </Menu>
     </div>
     <div style="position: absolute; top: 90px; left: 180px; right: 0;" class="clearfix">
-      <router-view></router-view>
+      <keep-alive>
+        <router-view></router-view>
+      </keep-alive>
     </div>
   </div>
 </template>

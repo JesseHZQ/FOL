@@ -7,8 +7,37 @@
       </Menu>
     </div>
     <div style="position: absolute; top: 90px; left: 179px; right: 0;" class="clearfix">
-      <span style="float: left; height: 30px; line-height: 30px; margin-left: 10px;">File Type : </span>
-      <Select v-model="fileType" style="width:120px; margin: 0 10px; float: left;">
+      <span v-show="secondSelected == '6.0 Total MOH($)' || secondSelected == '6.1 IDL(%&#)'" style="float: left; height: 30px; line-height: 30px; margin-left: 10px;">Cost Center:</span>
+      <Select v-show="secondSelected == '6.0 Total MOH($)' || secondSelected == '6.1 IDL(%&#)'" v-model="costCenter" style="width:80px; margin-left: 10px; float: left;">
+        <Option value="CC31">Facilities</Option>
+        <Option value="CC33">Engineering</Option>
+        <Option value="CC34">Quality</Option>
+        <Option value="CC37">Security</Option>
+        <Option value="CC42">Planning</Option>
+        <Option value="CC43">Procurement</Option>
+        <Option value="CC47">Logistics</Option>
+        <Option value="CC50">Operations Management</Option>
+        <Option value="CC52">Program Management</Option>
+        <Option value="CC53">Information Systems/Technology</Option>
+      </Select>
+      <span v-show="secondSelected == '7.0 Total SG&A($)'" style="float: left; height: 30px; line-height: 30px; margin-left: 10px;">Cost Center:</span>
+      <Select v-show="secondSelected == '7.0 Total SG&A($)'" v-model="costCenter" style="width:80px; margin-left: 10px; float: left;">
+        <Option value="CCSM">Business Development</Option>
+        <Option value="CC61">Finance</Option>
+        <Option value="CC62">HR</Option>
+        <Option value="CC63">IT ShareService</Option>
+      </Select>
+      <span v-show="secondSelected == '7.1 G.A.(%)' || secondSelected == '7.2 S.M.(%)'" style="float: left; height: 30px; line-height: 30px; margin-left: 10px;">Cost Center:</span>
+      <Select v-show="secondSelected == '7.1 G.A.(%)' || secondSelected == '7.2 S.M.(%)'" v-model="costCenter" style="width:80px; margin-left: 10px; float: left;">
+        <Option value="4606">IDL</Option>
+        <Option value="4607">Depn&Amor.</Option>
+        <Option value="4608">F.U.C.</Option>
+        <Option value="4610">MOH Other</Option>
+        <Option value="4611">Other Equip.</Option>
+        <Option value="4612">Electricity</Option>
+      </Select>
+      <span style="float: left; height: 30px; line-height: 30px; margin-left: 10px;">File Type:</span>
+      <Select v-model="fileType" style="width:80px; margin: 0 10px; float: left;">
         <Option value="1">Forecast</Option>
         <Option value="2">Percent</Option>
         <Option value="3">Amount</Option>
@@ -19,6 +48,7 @@
         action="666">
         <Button icon="ios-cloud-upload-outline">Upload File</Button>
       </Upload>
+      
       <div style="position: absolute; left: 40%; top: 0; z-index: 99;">
         <ButtonGroup shape="circle">
           <Button @click="changeDataType('forecast')" :type="currentPage == 'forecast' ? 'primary' : 'default'" :disabled="forecastData.length == 0">Forecast</Button>
@@ -64,7 +94,8 @@
     data() {
       return {
         spinShow: false,
-        version: '2018-11',
+        version: '2018-12',
+        costCenter: '', // 考虑到 6.0 & 7.0 加入这个字段
         tool: config,
         activeName: config.inputMenu[0].item,
         secondSelected: config.inputMenu[0].subItem[0],
@@ -193,7 +224,54 @@
 
     computed: {
       activeColumn() {
-        var result = [
+        if (this.secondSelected == '6.0 Total MOH($)' || this.secondSelected == '7.0 Total SG&A($)') {
+          var result = [
+          {
+            title: 'GL BPC Code',
+            width: 100,
+            // fixed: 'left',
+            align: 'center',
+            key: 'GLBPCCode'
+          },
+          {
+            title: 'GL BPC Desc',
+            width: 140,
+            // fixed: 'left',
+            align: 'center',
+            ellipsis: true,
+            key: 'GLBPCDescription'
+          },
+          {
+            title: 'GL Output Code',
+            width: 120,
+            fixed: 'left',
+            align: 'center',
+            key: 'GLOutputCode'
+          },
+          {
+            title: 'PARENTH1',
+            width: 120,
+            // fixed: 'left',
+            align: 'center',
+            key: 'PARENTH1'
+          },
+          {
+            title: 'Upload Code',
+            width: 120,
+            // fixed: 'left',
+            align: 'center',
+            key: 'UploadCode'
+          },
+          {
+            title: 'BPC Output Code',
+            width: 160,
+            align: 'center',
+            ellipsis: true,
+            key: 'BPCOutputCode'
+          }
+        ]
+        } else {
+          var result = [
           {
             title: 'GL BPC Code',
             width: 100,
@@ -254,6 +332,8 @@
             key: 'Segment'
           },
         ]
+        }
+        
         var month = {
           1: 'Jan',
           2: 'Feb',
@@ -324,7 +404,7 @@
                 on: {
                   click: () => {
                     this.editId = params.row.ID
-                    this.$http.get(config.baseUrl + `FOL_Input/getItemById?id=${this.editId}&type=${this.currentPage}`).then(res => {
+                    this.$http.get(config.baseUrl + `FOL_Input/getItemById?id=${this.editId}&type=${this.currentPage}&menuType=${this.secondSelected}`).then(res => {
                       this.formValidate = res.body.Data[0]
                       this.editShow = true
                     })
@@ -350,6 +430,14 @@
       }
     },
 
+    watch: {
+      costCenter(newVal, oldVal) {
+        if (newVal) {
+          this.getTypedList()
+        }
+      }
+    },
+
     created() {
       this.getTypedList()
     },
@@ -361,10 +449,12 @@
     },
 
     methods: {
-      getTypedList() {
+      getTypedList(isCalculate) {
         this.table.loading = true
         this.currentPage = ''
-        this.$http.get(config.baseUrl + 'FOL_Input/getTypedList?version=' + this.version + '&type=' + this.secondSelected).then(res => {
+        var str = this.secondSelected.replace('&', '%26').replace('#', '%23')
+        console.log(str)
+        this.$http.get(config.baseUrl + 'FOL_Input/getTypedList?version=' + this.version + '&type=' + str + '&cc=' + this.costCenter).then(res => {
           this.forecastData = res.body.DataForecast
           this.percentData = res.body.DataPercent
           this.amountData = res.body.DataAmount
@@ -384,8 +474,8 @@
 
       calculateData() {
         this.spinShow = true;
-        var str = this.secondSelected.replace('&', '%26')
-        this.$http.get(config.baseUrl + `FOL_Input/calculateByType?type=${str}&version=${this.version}`).then(res => {
+        var str = this.secondSelected.replace('&', '%26').replace('#', '%23')
+        this.$http.get(config.baseUrl + `FOL_Input/calculateByType?type=${str}&version=${this.version}&cc=${this.costCenter}`).then(res => {
           this.spinShow = false;
           if (res.body.Code == '200') {
             this.$Message.success(res.body.Message);
@@ -398,10 +488,11 @@
 
       submit() {
         this.formValidate.DataType = this.currentPage
+        this.formValidate.MenuType = this.secondSelected  // 添加 6.0 & 7.0 的标识
         this.$http.post(config.baseUrl + 'FOL_Input/updateItemById', this.formValidate).then(res => {
           if (res.body.Code == 200) {
             this.$Message.success(res.body.Message);
-            this.getTypedList();
+            this.calculateData()
           } else {
             this.$Message.error(res.body.Message);
           }
@@ -415,11 +506,23 @@
 
       changeType(name) {
         this.secondSelected = name;
+        if (this.secondSelected.indexOf('7.1') > -1 || this.secondSelected.indexOf('7.2') > -1) {
+          this.costCenter = '4606'
+        } else if (this.secondSelected.indexOf('7.0') > -1) {
+          this.costCenter = 'CCSM'
+        } else {
+          this.costCenter = 'CC31'
+        }
         this.getTypedList()
       },
 
       selectMenu(name) {
         this.activeName = name;
+        if (this.activeName.indexOf('7.0') > -1) {
+          this.costCenter = 'CCSM'
+        } else {
+          this.costCenter = 'CC31'
+        }
         this.secondList = this.tool.inputMenu.find(i => i.item == name).subItem
         this.secondSelected = this.secondList[0]
         this.getTypedList()
@@ -435,6 +538,7 @@
         fd.append('fileType', this.fileType);
         fd.append('type', this.secondSelected);
         fd.append('version', this.version);
+        fd.append('cc', this.costCenter);
         this.$http.post(config.baseUrl + 'FOL_Input/uploadFile', fd, {
           headers: {
             'Content-Type': 'multipart/form-data'
